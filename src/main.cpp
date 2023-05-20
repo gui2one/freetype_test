@@ -3,6 +3,7 @@
 */
 #include <iostream>
 #include <ostream>
+#include <sstream>
 #include <msdfgen.h>
 #include <msdfgen-ext.h>
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -35,21 +36,21 @@ std::ostream& operator<<(std::ostream& os, GlyphShape& my_shape)
     os << "My Shape Description ...." << std::endl;
     for(auto& contour : my_shape.contours)
     {
-        std::cout << "beginShape();\n" << std::endl;
+        os << "beginShape();" << std::endl;
         
         for(auto& point : contour.points)
         {
             os << "\tvertex(" << point.x << ", " << point.y << ");" << std::endl;
         }
 
-        std::cout << "endShape();\n" << std::endl;
+        os << "endShape();\n" << std::endl;
     }
     return os;
 }
 
 std::ostream& operator<<(std::ostream& os, FT_Glyph_Metrics& metrics)
 {
-    os << "---- GLYPH PETRICS ---------"<< std::endl;
+    os << "---- GLYPH METRICS ---------"<< std::endl;
     os << "width       : " << metrics.width << std::endl;
     os << "height      : " << metrics.height << std::endl;
     os << "horiAdvance : " << metrics.horiAdvance << std::endl;
@@ -58,6 +59,31 @@ std::ostream& operator<<(std::ostream& os, FT_Glyph_Metrics& metrics)
     os << "vertBearing : " << metrics.vertBearingX << ", " << metrics.vertBearingY  << std::endl;
     return os;
 }
+
+std::string write_p5_string(GlyphShape& shape,FT_Glyph_Metrics& metrics)
+{
+    std::ostringstream ss;
+    ss << "rect(" << 0  <<", " << 0  << ", "<<  metrics.width << ", " << metrics.height << ");" << std::endl;
+    ss << "translate(" << 0 << ", " << metrics.height << ");" << std::endl;
+
+    ss << "drawGrid();" << std::endl;
+    ss << "noStroke();" << std::endl;
+    ss << "fill(255,255,255,20);" << std::endl;
+
+    for(auto& contour : shape.contours)
+    {
+        ss << "beginShape();" << std::endl;
+        
+        for(auto& point : contour.points)
+        {
+            ss << "\tvertex(" << point.x << ", " << point.y << ");" << std::endl;
+        }
+
+        ss << "endShape();\n" << std::endl;
+    }
+
+    return ss.str();
+} 
 int outlineMoveTo(const FT_Vector* to, void* user) {
     GlyphShape* shape = reinterpret_cast<GlyphShape*>(user);
     MyContour contour;
@@ -120,7 +146,7 @@ int main() {
     FT_Set_Pixel_Sizes(ftFace, 3, 3); // Adjust the size as needed
 
     // Load glyph into the face's glyph slot
-    FT_Load_Glyph(ftFace, FT_Get_Char_Index(ftFace, 'K'), FT_LOAD_DEFAULT);
+    FT_Load_Glyph(ftFace, FT_Get_Char_Index(ftFace, 'j'), FT_LOAD_DEFAULT);
 
     auto metrics = ftFace->glyph->metrics;
     // Convert the glyph outline to an msdfgen shape
@@ -129,10 +155,13 @@ int main() {
     FT_Outline_Funcs outlineFuncs = { outlineMoveTo, outlineLineTo, outlineConicTo, outlineCubicTo, 0, 0 };
     FT_Outline_Decompose(&ftFace->glyph->outline, &outlineFuncs, &my_shape);
 
-    std::cout << my_shape << std::endl;
+    // std::cout << my_shape << std::endl;
+    
+    auto p5_data = write_p5_string(my_shape, ftFace->glyph->metrics);
+
+    std::cout << p5_data << std::endl;
     std::cout << ftFace->glyph->metrics << std::endl;
     
-
     // Apply edge coloring
     msdfgen::edgeColoringSimple(shape, 3.0);
 
