@@ -31,6 +31,31 @@ struct GlyphShape{
     std::vector<MyContour> contours;
 };
 
+msdfgen::Shape glyph_shape_to_msdfgen_shape(GlyphShape& glyph_shape)
+{
+    msdfgen::Shape shape;
+    for(const auto& cont : glyph_shape.contours)
+    {
+        msdfgen::Contour contour;
+        for(size_t i=0; i<cont.points.size()-1; i++)
+        {
+            Point2 pt0 = cont.points[i];
+            Point2 pt1 = cont.points[i+1];
+            contour.addEdge(EdgeHolder(pt0, pt1));
+            // std::cout << "adding Edge " << std::endl;
+        }
+
+        contour.addEdge(EdgeHolder(cont.points[cont.points.size()-1], cont.points[0]));
+        // std::cout << "adding contour " << std::endl;
+        
+        shape.contours.push_back(contour);
+    }
+
+    std::cout << "Shape Valid -> "<< (shape.validate() ? "true" : "false") << std::endl;
+    
+    return shape;
+}
+
 std::ostream& operator<<(std::ostream& os, GlyphShape& my_shape)
 {
     os << "My Shape Description ...." << std::endl;
@@ -84,6 +109,7 @@ std::string write_p5_string(GlyphShape& shape,FT_Glyph_Metrics& metrics)
 
     return ss.str();
 } 
+
 int outlineMoveTo(const FT_Vector* to, void* user) {
     GlyphShape* shape = reinterpret_cast<GlyphShape*>(user);
     MyContour contour;
@@ -146,11 +172,11 @@ int main() {
     FT_Set_Pixel_Sizes(ftFace, 3, 3); // Adjust the size as needed
 
     // Load glyph into the face's glyph slot
-    FT_Load_Glyph(ftFace, FT_Get_Char_Index(ftFace, 'j'), FT_LOAD_DEFAULT);
+    FT_Load_Glyph(ftFace, FT_Get_Char_Index(ftFace, 'P'), FT_LOAD_DEFAULT);
 
     auto metrics = ftFace->glyph->metrics;
     // Convert the glyph outline to an msdfgen shape
-    msdfgen::Shape shape;
+
     GlyphShape my_shape;
     FT_Outline_Funcs outlineFuncs = { outlineMoveTo, outlineLineTo, outlineConicTo, outlineCubicTo, 0, 0 };
     FT_Outline_Decompose(&ftFace->glyph->outline, &outlineFuncs, &my_shape);
@@ -162,6 +188,8 @@ int main() {
     std::cout << p5_data << std::endl;
     std::cout << ftFace->glyph->metrics << std::endl;
     
+
+    msdfgen::Shape shape = glyph_shape_to_msdfgen_shape(my_shape);
     // Apply edge coloring
     msdfgen::edgeColoringSimple(shape, 3.0);
 
@@ -173,22 +201,22 @@ int main() {
     msdfgen::Bitmap<float, 3> bitmap(width, height);
 
     // Generate the signed distance field
-    msdfgen::generateMSDF(bitmap, shape, 4.0, msdfgen::Vector2(-1.0, -1.0), msdfgen::Vector2(1.0, 1.0));
+    msdfgen::generateMSDF(bitmap, shape, 32.0, msdfgen::Vector2(1.0, 1.0), msdfgen::Vector2(0.0, 192.0));
 
     // Convert the bitmap to RGBA format
-    std::vector<unsigned char> pixels(width * height * 4);
+    std::vector<unsigned char> pixels(width * height * 3);
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
-            int index = (y * width + x) * 4;
+            int index = (y * width + x) * 3;
             pixels[index] = static_cast<unsigned char>(bitmap(x, y)[0] * 255); // Red channel
             pixels[index + 1] = static_cast<unsigned char>(bitmap(x, y)[1] * 255); // Green channel
             pixels[index + 2] = static_cast<unsigned char>(bitmap(x, y)[2] * 255); // Blue channel
-            pixels[index + 3] = 255;  // Alpha value
+            // pixels[index + 3] = 255;  // Alpha value
         }
     }
 
     // Save the bitmap to a file using stb_image
-    stbi_write_png("output.png", width, height, 4, pixels.data(), width * 4);
+    stbi_write_png("output2.png", width, height, 3, pixels.data(), width * 3);
 
     // Clean up FreeType resources
     FT_Done_Face(ftFace);
