@@ -29,9 +29,9 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${tinyxml2_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} tinyxml2 ${tinyxml2_LIBRARY})
 
 # libPNG
-add_subdirectory(vendor/tinyxml2)
-target_include_directories(${PROJECT_NAME} PUBLIC ${tinyxml2_INCLUDE_DIRS})
-target_link_libraries(${PROJECT_NAME} tinyxml2 ${tinyxml2_LIBRARY})
+add_subdirectory(vendor/libpng)
+target_include_directories(${PROJECT_NAME} PUBLIC ${libpng_INCLUDE_DIRS})
+target_link_libraries(${PROJECT_NAME} libpng ${libpng_LIBRARY})
 
 # # msdfgen
 
