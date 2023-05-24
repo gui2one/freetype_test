@@ -4,57 +4,41 @@
 #include <iostream>
 #include <ostream>
 #include <sstream>
-#include <msdfgen.h>
-#include <msdfgen-ext.h>
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 #include <ft2build.h>
 #include <freetype/ftoutln.h>
 #include FT_FREETYPE_H
 
+#include "glm/glm.hpp"
+#include <vector>
 
-using msdfgen::Point2;
-using msdfgen::EdgeHolder;
-using msdfgen::EdgeSegment;
-using msdfgen::QuadraticSegment;
-using msdfgen::CubicSegment;
-using msdfgen::Contour;
 
 struct MyEdge{
-    Point2 p1;
-    Point2 p2;
+    glm::vec2 p1;
+    glm::vec2 p2;
 };
 struct MyContour{
-    std::vector<Point2> points;
+    std::vector<glm::vec2> points;
 };
 struct GlyphShape{
     std::vector<MyContour> contours;
 };
 
-msdfgen::Shape glyph_shape_to_msdfgen_shape(GlyphShape& glyph_shape)
-{
-    msdfgen::Shape shape;
-    for(const auto& cont : glyph_shape.contours)
+class QuadraticSegment{
+    public:
+    QuadraticSegment(glm::vec2 pt0, glm::vec2 ctrl, glm::vec2 pt1)
     {
-        msdfgen::Contour contour;
-        for(size_t i=0; i<cont.points.size()-1; i++)
-        {
-            Point2 pt0 = cont.points[i];
-            Point2 pt1 = cont.points[i+1];
-            contour.addEdge(EdgeHolder(pt0, pt1));
-            // std::cout << "adding Edge " << std::endl;
-        }
 
-        contour.addEdge(EdgeHolder(cont.points[cont.points.size()-1], cont.points[0]));
-        // std::cout << "adding contour " << std::endl;
-        
-        shape.contours.push_back(contour);
     }
+};
+class CubicSegment{
+    public:
+    CubicSegment(glm::vec2 pt0, glm::vec2 ctrl1, glm::vec2 ctrl2, glm::vec2 pt1)
+    {
 
-    std::cout << "Shape Valid -> "<< (shape.validate() ? "true" : "false") << std::endl;
-    
-    return shape;
-}
+    }
+};
 
 std::ostream& operator<<(std::ostream& os, GlyphShape& my_shape)
 {
@@ -113,7 +97,7 @@ std::string write_p5_string(GlyphShape& shape,FT_Glyph_Metrics& metrics)
 int outlineMoveTo(const FT_Vector* to, void* user) {
     GlyphShape* shape = reinterpret_cast<GlyphShape*>(user);
     MyContour contour;
-    contour.points.push_back(Point2(to->x, to->y * -1.0f));
+    contour.points.push_back(glm::vec2(to->x, to->y * -1.0f));
     shape->contours.push_back(contour);
     return 0;
 }
@@ -121,7 +105,7 @@ int outlineMoveTo(const FT_Vector* to, void* user) {
 int outlineLineTo(const FT_Vector* to, void* user) {
     GlyphShape* shape = reinterpret_cast<GlyphShape*>(user);  
     auto& contour = shape->contours.back();
-    contour.points.push_back(Point2(to->x, to->y * -1.0f));
+    contour.points.push_back(glm::vec2(to->x, to->y * -1.0f));
     return 0;
 }
 
@@ -129,14 +113,14 @@ int outlineConicTo(const FT_Vector* control, const FT_Vector* to, void* user) {
     GlyphShape* shape = reinterpret_cast<GlyphShape*>(user);
     auto& contour = shape->contours.back();
     auto pt0 = contour.points.back();
-    QuadraticSegment quad_segment(pt0, Point2(control->x, control->y * -1.0f), Point2(to->x, to->y * -1.0f));
+    QuadraticSegment quad_segment(pt0, glm::vec2(control->x, control->y * -1.0f), glm::vec2(to->x, to->y * -1.0f));
 
     size_t iterations = 10;
     for(size_t i=0; i<iterations; i++)
     {
-        double step = 1.0 / ((double)iterations);
-        auto pt = quad_segment.point(step * (i+1));
-        contour.points.push_back(pt);
+        // double step = 1.0 / ((double)iterations);
+        // auto pt = quad_segment.point(step * (i+1));
+        // contour.points.push_back(pt);
     }
 
     return 0;
@@ -146,14 +130,14 @@ int outlineCubicTo(const FT_Vector* control1, const FT_Vector* control2, const F
     GlyphShape* shape = reinterpret_cast<GlyphShape*>(user);
     auto& contour = shape->contours.back();
     auto pt0 = contour.points.back();
-    CubicSegment cubic_segment(pt0, Point2(control1->x, control1->y * -1.0f), Point2(control2->x, control2->y * -1.0f), Point2(to->x, to->y * -1.0f));
+    CubicSegment cubic_segment(pt0, glm::vec2(control1->x, control1->y * -1.0f), glm::vec2(control2->x, control2->y * -1.0f), glm::vec2(to->x, to->y * -1.0f));
 
     size_t iterations = 10;
     for(size_t i=0; i<iterations; i++)
     {
-        double step = 1.0 / ((double)iterations);
-        auto pt = cubic_segment.point(step * (i+1));
-        contour.points.push_back(pt);
+        // double step = 1.0 / ((double)iterations);
+        // auto pt = cubic_segment.point(step * (i+1));
+        // contour.points.push_back(pt);
     }
 
     return 0;
@@ -189,34 +173,34 @@ int main() {
     std::cout << ftFace->glyph->metrics << std::endl;
     
 
-    msdfgen::Shape shape = glyph_shape_to_msdfgen_shape(my_shape);
-    // Apply edge coloring
-    msdfgen::edgeColoringSimple(shape, 3.0);
+    // msdfgen::Shape shape = glyph_shape_to_msdfgen_shape(my_shape);
+    // // Apply edge coloring
+    // msdfgen::edgeColoringSimple(shape, 3.0);
 
-    // Set the size of the output image
-    int width = 256;
-    int height = 256;
+    // // Set the size of the output image
+    // int width = 256;
+    // int height = 256;
 
-    // Create an empty bitmap
-    msdfgen::Bitmap<float, 3> bitmap(width, height);
+    // // Create an empty bitmap
+    // msdfgen::Bitmap<float, 3> bitmap(width, height);
 
-    // Generate the signed distance field
-    msdfgen::generateMSDF(bitmap, shape, 32.0, msdfgen::Vector2(1.0, 1.0), msdfgen::Vector2(0.0, 192.0));
+    // // Generate the signed distance field
+    // msdfgen::generateMSDF(bitmap, shape, 32.0, msdfgen::Vector2(1.0, 1.0), msdfgen::Vector2(0.0, 192.0));
 
-    // Convert the bitmap to RGBA format
-    std::vector<unsigned char> pixels(width * height * 3);
-    for (int y = 0; y < height; ++y) {
-        for (int x = 0; x < width; ++x) {
-            int index = (y * width + x) * 3;
-            pixels[index] = static_cast<unsigned char>(bitmap(x, y)[0] * 255); // Red channel
-            pixels[index + 1] = static_cast<unsigned char>(bitmap(x, y)[1] * 255); // Green channel
-            pixels[index + 2] = static_cast<unsigned char>(bitmap(x, y)[2] * 255); // Blue channel
-            // pixels[index + 3] = 255;  // Alpha value
-        }
-    }
+    // // Convert the bitmap to RGBA format
+    // std::vector<unsigned char> pixels(width * height * 3);
+    // for (int y = 0; y < height; ++y) {
+    //     for (int x = 0; x < width; ++x) {
+    //         int index = (y * width + x) * 3;
+    //         pixels[index] = static_cast<unsigned char>(bitmap(x, y)[0] * 255); // Red channel
+    //         pixels[index + 1] = static_cast<unsigned char>(bitmap(x, y)[1] * 255); // Green channel
+    //         pixels[index + 2] = static_cast<unsigned char>(bitmap(x, y)[2] * 255); // Blue channel
+    //         // pixels[index + 3] = 255;  // Alpha value
+    //     }
+    // }
 
-    // Save the bitmap to a file using stb_image
-    stbi_write_png("output2.png", width, height, 3, pixels.data(), width * 3);
+    // // Save the bitmap to a file using stb_image
+    // stbi_write_png("output2.png", width, height, 3, pixels.data(), width * 3);
 
     // Clean up FreeType resources
     FT_Done_Face(ftFace);
