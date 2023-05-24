@@ -1,9 +1,0 @@
-[submodule "vendor/libpng"]
-	path = vendor/libpng
-	url = https://github.com/gui2one/libpng.git
-[submodule "vendor/tinyxml2"]
-	path = vendor/tinyxml2
-	url = https://github.com/gui2one/tinyxml2.git
-[submodule "vendor/zlib"]
-	path = vendor/zlib
-	url = https://github.com/gui2one/zlib.git
