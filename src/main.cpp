@@ -12,33 +12,9 @@
 
 #include "glm/glm.hpp"
 #include <vector>
+#include "GlyphShape.h"
 
-
-struct MyEdge{
-    glm::vec2 p1;
-    glm::vec2 p2;
-};
-struct MyContour{
-    std::vector<glm::vec2> points;
-};
-struct GlyphShape{
-    std::vector<MyContour> contours;
-};
-
-class QuadraticSegment{
-    public:
-    QuadraticSegment(glm::vec2 pt0, glm::vec2 ctrl, glm::vec2 pt1)
-    {
-
-    }
-};
-class CubicSegment{
-    public:
-    CubicSegment(glm::vec2 pt0, glm::vec2 ctrl1, glm::vec2 ctrl2, glm::vec2 pt1)
-    {
-
-    }
-};
+float contour_is_clockwise(const Contour& contour);
 
 std::ostream& operator<<(std::ostream& os, GlyphShape& my_shape)
 {
@@ -81,6 +57,14 @@ std::string write_p5_string(GlyphShape& shape,FT_Glyph_Metrics& metrics)
 
     for(auto& contour : shape.contours)
     {
+        
+        if(contour_is_clockwise(contour))
+        {
+            ss << "fill(255,0,0,20);" << std::endl;
+        }else{
+            ss << "fill(0,255,0,20);" << std::endl;
+        }
+
         ss << "beginShape();" << std::endl;
         
         for(auto& point : contour.points)
@@ -94,9 +78,24 @@ std::string write_p5_string(GlyphShape& shape,FT_Glyph_Metrics& metrics)
     return ss.str();
 } 
 
+float contour_is_clockwise(const Contour& contour) {
+    float sum = 0.0f;
+    size_t numPoints = contour.points.size();
+
+    for (size_t i = 0; i < numPoints; ++i) {
+        const glm::vec2& p1 = contour.points[i];
+        const glm::vec2& p2 = contour.points[(i + 1) % numPoints];
+        sum += (p2.x - p1.x) * (p2.y + p1.y);
+    }
+
+    // Positive sum indicates counterclockwise winding
+    // Negative sum indicates clockwise winding
+    return sum < 0;
+}
+
 int outlineMoveTo(const FT_Vector* to, void* user) {
     GlyphShape* shape = reinterpret_cast<GlyphShape*>(user);
-    MyContour contour;
+    Contour contour;
     contour.points.push_back(glm::vec2(to->x, to->y * -1.0f));
     shape->contours.push_back(contour);
     return 0;
@@ -118,9 +117,9 @@ int outlineConicTo(const FT_Vector* control, const FT_Vector* to, void* user) {
     size_t iterations = 10;
     for(size_t i=0; i<iterations; i++)
     {
-        // double step = 1.0 / ((double)iterations);
-        // auto pt = quad_segment.point(step * (i+1));
-        // contour.points.push_back(pt);
+        double step = 1.0 / ((double)iterations);
+        auto pt = quad_segment.Evaluate(step * (i+1));
+        contour.points.push_back(pt);
     }
 
     return 0;
@@ -135,9 +134,9 @@ int outlineCubicTo(const FT_Vector* control1, const FT_Vector* control2, const F
     size_t iterations = 10;
     for(size_t i=0; i<iterations; i++)
     {
-        // double step = 1.0 / ((double)iterations);
-        // auto pt = cubic_segment.point(step * (i+1));
-        // contour.points.push_back(pt);
+        double step = 1.0 / ((double)iterations);
+        auto pt = cubic_segment.Evaluate(step * (i+1));
+        contour.points.push_back(pt);
     }
 
     return 0;

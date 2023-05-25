@@ -72,6 +72,9 @@
         "xmemory": "cpp",
         "xstddef": "cpp",
         "xtr1common": "cpp",
-        "xtree": "cpp"
+        "xtree": "cpp",
+        "array": "cpp",
+        "numeric": "cpp",
+        "random": "cpp"
     }
 }
