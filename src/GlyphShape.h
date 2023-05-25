@@ -18,9 +18,12 @@ class QuadraticSegment
 
         glm::vec2 Evaluate(float t)
         {
-            float x = (1.0f - t) * (1.0f - t) * pt1.x + 2.0f * (1.0f - t) * t * ctrl.x + t * t * pt2.x;
-            float y = (1.0f - t) * (1.0f - t) * pt1.y + 2.0f * (1.0f - t) * t * ctrl.y + t * t * pt2.y;            
-            return glm::vec2(x, y);
+            if(t < 0.0f) t = 0.0f;
+            else if( t > 1.0f) t = 1.0f;
+            
+            glm::vec2 pt = (1.0f - t) * (1.0f - t) * pt1 + 2.0f * (1.0f - t) * t * ctrl + t * t * pt2;            
+            
+            return pt;
         }
 
     private:
@@ -42,20 +45,14 @@ class CubicSegment
         }
 
         glm::vec2 Evaluate(float t)
-        {
-            float x = 
-                powf(1.0f - t, 3.0f) * pt1.x +
-                3 * powf(1.0f - t, 2.f) * t * ctrl1.x +
-                3 * (1.f - t) * powf(t, 2.f) * ctrl2.x +
-                powf(t, 3.f) * pt2.x;
-                
-            float y =
-                powf(1.f - t, 3.f) * pt1.y +
-                3 * powf(1.f - t, 2.f) * t * ctrl1.y +
-                3 * (1 - t) * powf(t, 2.f) * ctrl2.y +
-                pow(t, 3.f) * pt2.y;        
+        {       
+            glm::vec2 pt =
+                powf(1.f - t, 3.f) * pt1 +
+                3 * powf(1.f - t, 2.f) * t * ctrl1 +
+                3 * (1 - t) * powf(t, 2.f) * ctrl2 +
+                pow(t, 3.f) * pt2;        
             
-            return glm::vec2(x, y);
+            return pt;
         }
 
     private:

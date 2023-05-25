@@ -4,6 +4,7 @@
 #include <iostream>
 #include <ostream>
 #include <sstream>
+#include <windows.h>
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 #include <ft2build.h>
@@ -13,6 +14,8 @@
 #include "glm/glm.hpp"
 #include <vector>
 #include "GlyphShape.h"
+
+#include "poly2tri/poly2tri.h"
 
 float contour_is_clockwise(const Contour& contour);
 
@@ -93,6 +96,56 @@ float contour_is_clockwise(const Contour& contour) {
     return sum < 0;
 }
 
+// Function to set text in the clipboard
+void SetClipboardText(const std::string& text)
+{
+    // Open the clipboard
+    if (!OpenClipboard(nullptr))
+    {
+        // Handle error
+        return;
+    }
+
+    // Empty the clipboard
+    EmptyClipboard();
+
+    // Get the length of the text
+    size_t textLength = text.length();
+
+    // Allocate global memory for the text
+    HGLOBAL hText = GlobalAlloc(GMEM_MOVEABLE, textLength + 1);
+    if (hText == nullptr)
+    {
+        // Handle error
+        CloseClipboard();
+        return;
+    }
+
+    // Lock the global memory
+    char* pText = static_cast<char*>(GlobalLock(hText));
+    if (pText == nullptr)
+    {
+        // Handle error
+        GlobalFree(hText);
+        CloseClipboard();
+        return;
+    }
+
+    // Copy the text to the global memory
+    memcpy(pText, text.c_str(), textLength);
+    pText[textLength] = '\0'; // Add null-terminator
+
+    // Unlock the global memory
+    GlobalUnlock(hText);
+
+    // Set the text in the clipboard
+    SetClipboardData(CF_TEXT, hText);
+
+    // Close the clipboard
+    CloseClipboard();
+}
+
+
 int outlineMoveTo(const FT_Vector* to, void* user) {
     GlyphShape* shape = reinterpret_cast<GlyphShape*>(user);
     Contour contour;
@@ -142,6 +195,69 @@ int outlineCubicTo(const FT_Vector* control1, const FT_Vector* control2, const F
     return 0;
 }
 
+
+/* Utiliies */
+class Poly2TriShape
+{
+
+    public :
+    Poly2TriShape(){
+
+    }
+    ~Poly2TriShape(){
+        // for (size_t i = 0; i < base_shape.size(); i++)
+        // {
+        //     delete base_shape[i];
+        // }
+
+        // for(auto& hole : holes)
+        // {
+        //     for (size_t i = 0; i < hole.size(); i++)
+        //     {
+        //         delete hole[i];
+        //     }
+        // }
+
+        // std::cout << "-- Poly2TriShape::DESTRUCTOR Called" << std::endl;
+    }
+
+
+    std::vector<p2t::Point*> base_shape;
+    std::vector<std::vector<p2t::Point*>> holes;
+
+};
+
+Poly2TriShape glyph_shape_to_poly2tri(const GlyphShape& glyph_shape)
+{
+    Poly2TriShape s;
+
+    if(glyph_shape.contours.size() > 0)
+    {
+        auto& contour = glyph_shape.contours[0];
+        std::vector<p2t::Point*> points;
+        // points.reserve(contour.points.size());
+
+        for (auto& cpt : contour.points)
+        {
+            p2t::Point* pt = new p2t::Point(cpt.x, cpt.y);
+            points.push_back(pt);
+
+            // std::cout << pt->x << ", " << pt->y << std::endl;
+            
+        }
+
+        // remove last point !!
+        points.pop_back();
+
+        s.base_shape = points;
+         
+    }
+    return s;
+}
+
+
+
+
 int main() {
     // Initialize FreeType library
     FT_Library ftLibrary;
@@ -155,7 +271,7 @@ int main() {
     FT_Set_Pixel_Sizes(ftFace, 3, 3); // Adjust the size as needed
 
     // Load glyph into the face's glyph slot
-    FT_Load_Glyph(ftFace, FT_Get_Char_Index(ftFace, 'P'), FT_LOAD_DEFAULT);
+    FT_Load_Glyph(ftFace, FT_Get_Char_Index(ftFace, 'B'), FT_LOAD_DEFAULT);
 
     auto metrics = ftFace->glyph->metrics;
     // Convert the glyph outline to an msdfgen shape
@@ -164,12 +280,41 @@ int main() {
     FT_Outline_Funcs outlineFuncs = { outlineMoveTo, outlineLineTo, outlineConicTo, outlineCubicTo, 0, 0 };
     FT_Outline_Decompose(&ftFace->glyph->outline, &outlineFuncs, &my_shape);
 
+
+
+
+    Poly2TriShape poly_shape = glyph_shape_to_poly2tri(my_shape);
+    // poly_shape.base_shape = { 
+    //     new p2t::Point(0.0, 0.0), 
+    //     new p2t::Point(1.0, 0.0), 
+    //     new p2t::Point(1.0, 1.0), 
+    //     new p2t::Point(0.0, 1.0) 
+    // };
+    p2t::CDT* cdt = new p2t::CDT(poly_shape.base_shape);
+
+    cdt->Triangulate();
+    auto triangles = cdt->GetTriangles();
+
+
+    std::stringstream ss;
+    for(const auto& tri : triangles)
+    {
+        ss << "beginShape();";
+        
+        ss << "vertex(" <<tri->GetPoint(0)->x << ","  << tri->GetPoint(0)->y << ");";
+        ss << "vertex(" <<tri->GetPoint(1)->x << ","  << tri->GetPoint(1)->y << ");";
+        ss << "vertex(" <<tri->GetPoint(2)->x << ","  << tri->GetPoint(2)->y << ");";
+        
+        ss << "endShape();";
+    }
+
+    SetClipboardText(ss.str());
     // std::cout << my_shape << std::endl;
     
-    auto p5_data = write_p5_string(my_shape, ftFace->glyph->metrics);
+    // auto p5_data = write_p5_string(my_shape, ftFace->glyph->metrics);
 
-    std::cout << p5_data << std::endl;
-    std::cout << ftFace->glyph->metrics << std::endl;
+    // std::cout << p5_data << std::endl;
+    // std::cout << ftFace->glyph->metrics << std::endl;
     
 
     // msdfgen::Shape shape = glyph_shape_to_msdfgen_shape(my_shape);
