@@ -4,6 +4,8 @@
 #include <iostream>
 #include <ostream>
 #include <sstream>
+#include <vector>
+#include <unordered_map>
 #include <windows.h>
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
@@ -12,7 +14,6 @@
 #include FT_FREETYPE_H
 
 #include "glm/glm.hpp"
-#include <vector>
 #include "GlyphShape.h"
 
 #include "poly2tri/poly2tri.h"
@@ -255,7 +256,32 @@ Poly2TriShape glyph_shape_to_poly2tri(const GlyphShape& glyph_shape)
     return s;
 }
 
+std::pair<std::vector<glm::vec2>, std::vector<int>> convertTrianglesToPointsAndIndices(const std::vector<p2t::Triangle *>& triangles) {
+    std::vector<glm::vec2> uniquePoints;
+    std::vector<int> indices;
+    std::unordered_map<p2t::Point*, int> pointToIndexMap;
 
+    
+    for (const auto& triangle : triangles) {
+        for (int i = 0; i < 3; ++i) {
+            
+            auto vertex = triangle->GetPoint(i);
+            auto it = pointToIndexMap.find(vertex);
+            if (it != pointToIndexMap.end()) {
+                // Vertex already exists, retrieve the index
+                indices.push_back(it->second);
+            } else {
+                // Add the vertex to the map and unique points vector
+                int newIndex = static_cast<int>(uniquePoints.size());
+                pointToIndexMap[vertex] = newIndex;
+                uniquePoints.push_back(glm::vec2(vertex->x, vertex->y));
+                indices.push_back(newIndex);
+            }
+        }
+    }
+
+    return std::make_pair(uniquePoints, indices);
+}
 
 
 int main() {
@@ -271,7 +297,7 @@ int main() {
     FT_Set_Pixel_Sizes(ftFace, 3, 3); // Adjust the size as needed
 
     // Load glyph into the face's glyph slot
-    FT_Load_Glyph(ftFace, FT_Get_Char_Index(ftFace, 'B'), FT_LOAD_DEFAULT);
+    FT_Load_Glyph(ftFace, FT_Get_Char_Index(ftFace, '@'), FT_LOAD_DEFAULT);
 
     auto metrics = ftFace->glyph->metrics;
     // Convert the glyph outline to an msdfgen shape
@@ -295,19 +321,65 @@ int main() {
     cdt->Triangulate();
     auto triangles = cdt->GetTriangles();
 
+    
+
+
+    auto mesh_data = convertTrianglesToPointsAndIndices(triangles);
+
+    std::cout << "num points  : " <<mesh_data.first.size() << std::endl;
+    std::cout << "num indices : " <<mesh_data.second.size() << std::endl;
+
+    auto& points = mesh_data.first;
+    auto& indices = mesh_data.second;
+
+
+
+
+
+
+
 
     std::stringstream ss;
-    for(const auto& tri : triangles)
-    {
-        ss << "beginShape();";
-        
-        ss << "vertex(" <<tri->GetPoint(0)->x << ","  << tri->GetPoint(0)->y << ");";
-        ss << "vertex(" <<tri->GetPoint(1)->x << ","  << tri->GetPoint(1)->y << ");";
-        ss << "vertex(" <<tri->GetPoint(2)->x << ","  << tri->GetPoint(2)->y << ");";
-        
-        ss << "endShape();";
-    }
 
+    // write indices
+    ss << "let indices = [";
+    
+    size_t num_indices = indices.size();
+    for (size_t i = 0; i < num_indices; i++)
+    {
+        ss << indices[i];
+        if( i < num_indices-1)
+        {
+            ss << ", ";
+        }
+    }
+    ss << "];" << std::endl;
+
+    // write points
+    ss << "\nlet points = [";
+    
+    size_t num_points = points.size();
+    for (size_t i = 0; i < num_points; i++)
+    {
+        ss << points[i].x << ", " << points[i].y;
+        if( i < num_points-1)
+        {
+            ss << ", ";
+        }
+    }
+    ss << "];" << std::endl;
+
+
+    // for(const auto& tri : triangles)
+    // {
+    //     ss << "beginShape();";
+
+    //     ss << "vertex(" <<tri->GetPoint(0)->x << ","  << tri->GetPoint(0)->y << ");";
+    //     ss << "vertex(" <<tri->GetPoint(1)->x << ","  << tri->GetPoint(1)->y << ");";
+    //     ss << "vertex(" <<tri->GetPoint(2)->x << ","  << tri->GetPoint(2)->y << ");";
+        
+    //     ss << "endShape();";
+    // }
     SetClipboardText(ss.str());
     // std::cout << my_shape << std::endl;
     
