@@ -18,6 +18,12 @@
 
 #include "poly2tri/poly2tri.h"
 
+// #include <iomanip>
+#include <locale>
+#include <string>
+#include <codecvt>
+
+
 
 size_t ITER = 3;
 float contour_is_clockwise(const Contour& contour);
@@ -197,7 +203,7 @@ class Poly2TriShape
     }
 
 
-    std::vector<p2t::Point*> base_shape;
+    std::vector<std::vector<p2t::Point*>> base_shapes;
     std::vector<std::vector<p2t::Point*>> holes;
 
 };
@@ -224,7 +230,7 @@ Poly2TriShape glyph_shape_to_poly2tri(const GlyphShape& glyph_shape)
         // remove last point !!
         points.pop_back();
 
-        s.base_shape = points;
+        s.base_shapes.push_back(points);
          
     }
 
@@ -235,20 +241,20 @@ Poly2TriShape glyph_shape_to_poly2tri(const GlyphShape& glyph_shape)
             /* code */
             auto& contour = glyph_shape.contours[i];
 
+            std::vector<p2t::Point*> points;
+            for (auto& cpt : contour.points)
+            {
+                p2t::Point* pt = new p2t::Point(cpt.x, cpt.y);
+                points.push_back(pt);
+            }
+
+            // remove last point !!
+            points.pop_back();
+
             if(!contour_is_clockwise(contour)){
-                std::vector<p2t::Point*> points;
-                for (auto& cpt : contour.points)
-                {
-                    p2t::Point* pt = new p2t::Point(cpt.x, cpt.y);
-                    points.push_back(pt);
-
-                    // std::cout << pt->x << ", " << pt->y << std::endl;
-                    
-                }
-
-                // remove last point !!
-                points.pop_back();
                 s.holes.push_back(points);
+            }else{
+                s.base_shapes.push_back(points);
             }
         }
         
@@ -291,14 +297,26 @@ int main() {
 
     // Load font face
     FT_Face ftFace;
-    FT_New_Face(ftLibrary, "C:/Windows/Fonts/ariblk.ttf", 0, &ftFace);
+    FT_New_Face(ftLibrary, "C:/Windows/Fonts/arial.ttf", 0, &ftFace);
+
+
+    // Load glyph into the face's glyph slot
+    FT_Select_Charmap(ftFace, ft_encoding_unicode);
 
     // Set font size and scaling
     FT_Set_Pixel_Sizes(ftFace, 3, 3); // Adjust the size as needed
 
-    // Load glyph into the face's glyph slot
-    FT_Load_Glyph(ftFace, FT_Get_Char_Index(ftFace, 'i'), FT_LOAD_DEFAULT);
 
+    std::cout << "-------------------------------- " << std::hex <<'é' << std::endl;
+    
+
+    std::wstring_convert<std::codecvt_utf8_utf16<char16_t>,char16_t> converter;
+    std::string mbs = converter.to_bytes('é');
+
+    
+    auto unicode_value = static_cast<unsigned int>(mbs[0]);
+    auto char_index = FT_Get_Char_Index(ftFace, unicode_value);
+    FT_Load_Glyph(ftFace, char_index, FT_LOAD_DEFAULT);
     auto metrics = ftFace->glyph->metrics;
     // Convert the glyph outline to an msdfgen shape
 
@@ -310,13 +328,8 @@ int main() {
 
 
     Poly2TriShape poly_shape = glyph_shape_to_poly2tri(my_shape);
-    // poly_shape.base_shape = { 
-    //     new p2t::Point(0.0, 0.0), 
-    //     new p2t::Point(1.0, 0.0), 
-    //     new p2t::Point(1.0, 1.0), 
-    //     new p2t::Point(0.0, 1.0) 
-    // };
-    p2t::CDT* cdt = new p2t::CDT(poly_shape.base_shape);
+
+    p2t::CDT* cdt = new p2t::CDT(poly_shape.base_shapes[0]);
     for(const auto& hole : poly_shape.holes)
     {
         cdt->AddHole(hole);
@@ -325,7 +338,6 @@ int main() {
     cdt->Triangulate();
     auto triangles = cdt->GetTriangles();
 
-    
 
 
     auto mesh_data = convertTrianglesToPointsAndIndices(triangles);
@@ -335,11 +347,6 @@ int main() {
 
     auto& points = mesh_data.first;
     auto& indices = mesh_data.second;
-
-
-
-
-
 
 
 
@@ -374,54 +381,12 @@ int main() {
     ss << "];" << std::endl;
 
 
-    // for(const auto& tri : triangles)
-    // {
-    //     ss << "beginShape();";
-
-    //     ss << "vertex(" <<tri->GetPoint(0)->x << ","  << tri->GetPoint(0)->y << ");";
-    //     ss << "vertex(" <<tri->GetPoint(1)->x << ","  << tri->GetPoint(1)->y << ");";
-    //     ss << "vertex(" <<tri->GetPoint(2)->x << ","  << tri->GetPoint(2)->y << ");";
-        
-    //     ss << "endShape();";
-    // }
+    /* 
+        very cool method, used only to populate clipboard to be able to just paste content into p5js editor, 
+        for visualization purposes. thanks to chatgpt :)
+    */
     SetClipboardText(ss.str());
-    // std::cout << my_shape << std::endl;
-    
-    // auto p5_data = write_p5_string(my_shape, ftFace->glyph->metrics);
-
-    // std::cout << p5_data << std::endl;
-    // std::cout << ftFace->glyph->metrics << std::endl;
-    
-
-    // msdfgen::Shape shape = glyph_shape_to_msdfgen_shape(my_shape);
-    // // Apply edge coloring
-    // msdfgen::edgeColoringSimple(shape, 3.0);
-
-    // // Set the size of the output image
-    // int width = 256;
-    // int height = 256;
-
-    // // Create an empty bitmap
-    // msdfgen::Bitmap<float, 3> bitmap(width, height);
-
-    // // Generate the signed distance field
-    // msdfgen::generateMSDF(bitmap, shape, 32.0, msdfgen::Vector2(1.0, 1.0), msdfgen::Vector2(0.0, 192.0));
-
-    // // Convert the bitmap to RGBA format
-    // std::vector<unsigned char> pixels(width * height * 3);
-    // for (int y = 0; y < height; ++y) {
-    //     for (int x = 0; x < width; ++x) {
-    //         int index = (y * width + x) * 3;
-    //         pixels[index] = static_cast<unsigned char>(bitmap(x, y)[0] * 255); // Red channel
-    //         pixels[index + 1] = static_cast<unsigned char>(bitmap(x, y)[1] * 255); // Green channel
-    //         pixels[index + 2] = static_cast<unsigned char>(bitmap(x, y)[2] * 255); // Blue channel
-    //         // pixels[index + 3] = 255;  // Alpha value
-    //     }
-    // }
-
-    // // Save the bitmap to a file using stb_image
-    // stbi_write_png("output2.png", width, height, 3, pixels.data(), width * 3);
-
+ 
     // Clean up FreeType resources
     FT_Done_Face(ftFace);
     FT_Done_FreeType(ftLibrary);

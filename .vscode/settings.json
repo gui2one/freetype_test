@@ -75,6 +75,8 @@
         "xtree": "cpp",
         "array": "cpp",
         "numeric": "cpp",
-        "random": "cpp"
+        "random": "cpp",
+        "cuchar": "cpp",
+        "codecvt": "cpp"
     }
 }
