@@ -4,7 +4,6 @@
 
 #include "glm/glm.hpp"
 
-
 class QuadraticSegment
 {
 
@@ -74,5 +73,35 @@ struct Contour{
 struct GlyphShape{
     std::vector<Contour> contours;
 };
+
+
+std::ostream& operator<<(std::ostream& os, GlyphShape& my_shape)
+{
+    os << "My Shape Description ...." << std::endl;
+    for(auto& contour : my_shape.contours)
+    {
+        os << "beginShape();" << std::endl;
+        
+        for(auto& point : contour.points)
+        {
+            os << "\tvertex(" << point.x << ", " << point.y << ");" << std::endl;
+        }
+
+        os << "endShape();\n" << std::endl;
+    }
+    return os;
+}
+
+std::ostream& operator<<(std::ostream& os, FT_Glyph_Metrics& metrics)
+{
+    os << "---- GLYPH METRICS ---------"<< std::endl;
+    os << "width       : " << metrics.width << std::endl;
+    os << "height      : " << metrics.height << std::endl;
+    os << "horiAdvance : " << metrics.horiAdvance << std::endl;
+    os << "vertAdvance : " << metrics.vertAdvance << std::endl;
+    os << "horiBearing : " << metrics.horiBearingX << ", " << metrics.horiBearingY  << std::endl;
+    os << "vertBearing : " << metrics.vertBearingX << ", " << metrics.vertBearingY  << std::endl;
+    return os;
+}
 
 #endif

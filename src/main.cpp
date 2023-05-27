@@ -18,36 +18,10 @@
 
 #include "poly2tri/poly2tri.h"
 
+
+size_t ITER = 3;
 float contour_is_clockwise(const Contour& contour);
 
-std::ostream& operator<<(std::ostream& os, GlyphShape& my_shape)
-{
-    os << "My Shape Description ...." << std::endl;
-    for(auto& contour : my_shape.contours)
-    {
-        os << "beginShape();" << std::endl;
-        
-        for(auto& point : contour.points)
-        {
-            os << "\tvertex(" << point.x << ", " << point.y << ");" << std::endl;
-        }
-
-        os << "endShape();\n" << std::endl;
-    }
-    return os;
-}
-
-std::ostream& operator<<(std::ostream& os, FT_Glyph_Metrics& metrics)
-{
-    os << "---- GLYPH METRICS ---------"<< std::endl;
-    os << "width       : " << metrics.width << std::endl;
-    os << "height      : " << metrics.height << std::endl;
-    os << "horiAdvance : " << metrics.horiAdvance << std::endl;
-    os << "vertAdvance : " << metrics.vertAdvance << std::endl;
-    os << "horiBearing : " << metrics.horiBearingX << ", " << metrics.horiBearingY  << std::endl;
-    os << "vertBearing : " << metrics.vertBearingX << ", " << metrics.vertBearingY  << std::endl;
-    return os;
-}
 
 std::string write_p5_string(GlyphShape& shape,FT_Glyph_Metrics& metrics)
 {
@@ -168,7 +142,7 @@ int outlineConicTo(const FT_Vector* control, const FT_Vector* to, void* user) {
     auto pt0 = contour.points.back();
     QuadraticSegment quad_segment(pt0, glm::vec2(control->x, control->y * -1.0f), glm::vec2(to->x, to->y * -1.0f));
 
-    size_t iterations = 10;
+    size_t iterations = ITER;
     for(size_t i=0; i<iterations; i++)
     {
         double step = 1.0 / ((double)iterations);
@@ -185,7 +159,7 @@ int outlineCubicTo(const FT_Vector* control1, const FT_Vector* control2, const F
     auto pt0 = contour.points.back();
     CubicSegment cubic_segment(pt0, glm::vec2(control1->x, control1->y * -1.0f), glm::vec2(control2->x, control2->y * -1.0f), glm::vec2(to->x, to->y * -1.0f));
 
-    size_t iterations = 10;
+    size_t iterations = ITER;
     for(size_t i=0; i<iterations; i++)
     {
         double step = 1.0 / ((double)iterations);
@@ -219,7 +193,7 @@ class Poly2TriShape
         //     }
         // }
 
-        // std::cout << "-- Poly2TriShape::DESTRUCTOR Called" << std::endl;
+        std::cout << "-- Poly2TriShape::DESTRUCTOR Called" << std::endl;
     }
 
 
@@ -252,6 +226,32 @@ Poly2TriShape glyph_shape_to_poly2tri(const GlyphShape& glyph_shape)
 
         s.base_shape = points;
          
+    }
+
+    if( glyph_shape.contours.size() > 1)
+    {
+        for (size_t i = 1; i < glyph_shape.contours.size(); i++)
+        {
+            /* code */
+            auto& contour = glyph_shape.contours[i];
+
+            if(!contour_is_clockwise(contour)){
+                std::vector<p2t::Point*> points;
+                for (auto& cpt : contour.points)
+                {
+                    p2t::Point* pt = new p2t::Point(cpt.x, cpt.y);
+                    points.push_back(pt);
+
+                    // std::cout << pt->x << ", " << pt->y << std::endl;
+                    
+                }
+
+                // remove last point !!
+                points.pop_back();
+                s.holes.push_back(points);
+            }
+        }
+        
     }
     return s;
 }
@@ -297,7 +297,7 @@ int main() {
     FT_Set_Pixel_Sizes(ftFace, 3, 3); // Adjust the size as needed
 
     // Load glyph into the face's glyph slot
-    FT_Load_Glyph(ftFace, FT_Get_Char_Index(ftFace, '@'), FT_LOAD_DEFAULT);
+    FT_Load_Glyph(ftFace, FT_Get_Char_Index(ftFace, '$'), FT_LOAD_DEFAULT);
 
     auto metrics = ftFace->glyph->metrics;
     // Convert the glyph outline to an msdfgen shape
@@ -317,6 +317,10 @@ int main() {
     //     new p2t::Point(0.0, 1.0) 
     // };
     p2t::CDT* cdt = new p2t::CDT(poly_shape.base_shape);
+    for(const auto& hole : poly_shape.holes)
+    {
+        cdt->AddHole(hole);
+    }
 
     cdt->Triangulate();
     auto triangles = cdt->GetTriangles();
