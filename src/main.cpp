@@ -297,7 +297,7 @@ int main() {
     FT_Set_Pixel_Sizes(ftFace, 3, 3); // Adjust the size as needed
 
     // Load glyph into the face's glyph slot
-    FT_Load_Glyph(ftFace, FT_Get_Char_Index(ftFace, '$'), FT_LOAD_DEFAULT);
+    FT_Load_Glyph(ftFace, FT_Get_Char_Index(ftFace, 'i'), FT_LOAD_DEFAULT);
 
     auto metrics = ftFace->glyph->metrics;
     // Convert the glyph outline to an msdfgen shape
