@@ -307,15 +307,7 @@ int main() {
     FT_Set_Pixel_Sizes(ftFace, 3, 3); // Adjust the size as needed
 
 
-    std::cout << "-------------------------------- " << std::hex <<'é' << std::endl;
-    
-
-    std::wstring_convert<std::codecvt_utf8_utf16<char16_t>,char16_t> converter;
-    std::string mbs = converter.to_bytes('é');
-
-    
-    auto unicode_value = static_cast<unsigned int>(mbs[0]);
-    auto char_index = FT_Get_Char_Index(ftFace, unicode_value);
+    auto char_index = FT_Get_Char_Index(ftFace, 0x00E9);
     FT_Load_Glyph(ftFace, char_index, FT_LOAD_DEFAULT);
     auto metrics = ftFace->glyph->metrics;
     // Convert the glyph outline to an msdfgen shape
