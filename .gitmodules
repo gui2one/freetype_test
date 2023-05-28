@@ -4,3 +4,6 @@
 [submodule "vendor/glm"]
 	path = vendor/glm
 	url = https://github.com/gui2one/glm
+[submodule "vendor/tiny-utf8"]
+	path = vendor/tiny-utf8
+	url = https://github.com/gui2one/tiny-utf8.git
