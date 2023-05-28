@@ -307,7 +307,7 @@ int main() {
     FT_Set_Pixel_Sizes(ftFace, 3, 3); // Adjust the size as needed
 
 
-    auto char_index = FT_Get_Char_Index(ftFace, 0x00E9);
+    auto char_index = FT_Get_Char_Index(ftFace, 'i');
     FT_Load_Glyph(ftFace, char_index, FT_LOAD_DEFAULT);
     auto metrics = ftFace->glyph->metrics;
     // Convert the glyph outline to an msdfgen shape
@@ -321,26 +321,34 @@ int main() {
 
     Poly2TriShape poly_shape = glyph_shape_to_poly2tri(my_shape);
 
-    p2t::CDT* cdt = new p2t::CDT(poly_shape.base_shapes[0]);
-    for(const auto& hole : poly_shape.holes)
+    std::vector<glm::vec2> points; 
+    std::vector<int> indices;
+
+    std::vector<p2t::Triangle *> triangles;
+    for(const auto& base_shape : poly_shape.base_shapes)
     {
-        cdt->AddHole(hole);
+
+        p2t::CDT* cdt = new p2t::CDT(base_shape);
+        for(const auto& hole : poly_shape.holes)
+        {
+            cdt->AddHole(hole);
+        }
+
+        cdt->Triangulate();
+        auto tris = cdt->GetTriangles();
+        triangles.insert(triangles.end(), tris.begin(), tris.end());
+
+
+
     }
-
-    cdt->Triangulate();
-    auto triangles = cdt->GetTriangles();
-
-
 
     auto mesh_data = convertTrianglesToPointsAndIndices(triangles);
 
     std::cout << "num points  : " <<mesh_data.first.size() << std::endl;
     std::cout << "num indices : " <<mesh_data.second.size() << std::endl;
 
-    auto& points = mesh_data.first;
-    auto& indices = mesh_data.second;
-
-
+    points = mesh_data.first;
+    indices = mesh_data.second;
 
     std::stringstream ss;
 
