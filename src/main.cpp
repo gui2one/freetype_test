@@ -218,31 +218,31 @@ Poly2TriShape* glyph_shape_to_poly2tri(const GlyphShape& glyph_shape)
 {
     Poly2TriShape* s = new Poly2TriShape();
 
-    if(glyph_shape.contours.size() > 0)
-    {
-        auto& contour = glyph_shape.contours[0];
-        std::vector<p2t::Point*> points;
-        // points.reserve(contour.points.size());
+    // if(glyph_shape.contours.size() > 0)
+    // {
+    //     auto& contour = glyph_shape.contours[0];
+    //     std::vector<p2t::Point*> points;
+    //     // points.reserve(contour.points.size());
 
-        for (auto& cpt : contour.points)
-        {
-            p2t::Point* pt = new p2t::Point(cpt.x, cpt.y);
-            points.push_back(pt);
+    //     for (auto& cpt : contour.points)
+    //     {
+    //         p2t::Point* pt = new p2t::Point(cpt.x, cpt.y);
+    //         points.push_back(pt);
 
-            // std::cout << pt->x << ", " << pt->y << std::endl;
+    //         // std::cout << pt->x << ", " << pt->y << std::endl;
             
-        }
+    //     }
 
-        // remove last point !!
-        points.pop_back();
+    //     // remove last point !!
+    //     points.pop_back();
 
-        s->base_shapes.push_back(points);
+    //     s->base_shapes.push_back(points);
          
-    }
+    // }
 
-    if( glyph_shape.contours.size() > 1)
+    if( glyph_shape.contours.size() > 0)
     {
-        for (size_t i = 1; i < glyph_shape.contours.size(); i++)
+        for (size_t i = 0; i < glyph_shape.contours.size(); i++)
         {
             /* code */
             auto& contour = glyph_shape.contours[i];
@@ -314,7 +314,7 @@ int main() {
     FT_Set_Pixel_Sizes(ftFace, 3, 3); // Adjust the size as needed
 
 
-    tiny_utf8::utf8_string utf_string = "?";
+    tiny_utf8::utf8_string utf_string = "*";
     
     auto char_code = static_cast<unsigned char>(utf_string[0]);
     std::cout << std::hex << char_code << std::endl;
