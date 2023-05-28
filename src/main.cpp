@@ -186,18 +186,23 @@ class Poly2TriShape
 
     }
     ~Poly2TriShape(){
-        // for (size_t i = 0; i < base_shape.size(); i++)
-        // {
-        //     delete base_shape[i];
-        // }
 
-        // for(auto& hole : holes)
-        // {
-        //     for (size_t i = 0; i < hole.size(); i++)
-        //     {
-        //         delete hole[i];
-        //     }
-        // }
+        for(const auto& base_shape : base_shapes)
+        {
+
+            for (size_t i = 0; i < base_shape.size(); i++)
+            {
+                delete base_shape[i];
+            }
+
+        }
+        for(auto& hole : holes)
+        {
+            for (size_t i = 0; i < hole.size(); i++)
+            {
+                delete hole[i];
+            }
+        }
 
         std::cout << "-- Poly2TriShape::DESTRUCTOR Called" << std::endl;
     }
@@ -208,9 +213,9 @@ class Poly2TriShape
 
 };
 
-Poly2TriShape glyph_shape_to_poly2tri(const GlyphShape& glyph_shape)
+Poly2TriShape* glyph_shape_to_poly2tri(const GlyphShape& glyph_shape)
 {
-    Poly2TriShape s;
+    Poly2TriShape* s = new Poly2TriShape();
 
     if(glyph_shape.contours.size() > 0)
     {
@@ -230,7 +235,7 @@ Poly2TriShape glyph_shape_to_poly2tri(const GlyphShape& glyph_shape)
         // remove last point !!
         points.pop_back();
 
-        s.base_shapes.push_back(points);
+        s->base_shapes.push_back(points);
          
     }
 
@@ -252,9 +257,9 @@ Poly2TriShape glyph_shape_to_poly2tri(const GlyphShape& glyph_shape)
             points.pop_back();
 
             if(!contour_is_clockwise(contour)){
-                s.holes.push_back(points);
+                s->holes.push_back(points);
             }else{
-                s.base_shapes.push_back(points);
+                s->base_shapes.push_back(points);
             }
         }
         
@@ -319,17 +324,17 @@ int main() {
 
 
 
-    Poly2TriShape poly_shape = glyph_shape_to_poly2tri(my_shape);
+    Poly2TriShape* poly_shape = glyph_shape_to_poly2tri(my_shape);
 
     std::vector<glm::vec2> points; 
     std::vector<int> indices;
-
     std::vector<p2t::Triangle *> triangles;
-    for(const auto& base_shape : poly_shape.base_shapes)
+
+    for(const auto& base_shape : poly_shape->base_shapes)
     {
 
         p2t::CDT* cdt = new p2t::CDT(base_shape);
-        for(const auto& hole : poly_shape.holes)
+        for(const auto& hole : poly_shape->holes)
         {
             cdt->AddHole(hole);
         }
@@ -342,6 +347,8 @@ int main() {
 
     }
 
+
+
     auto mesh_data = convertTrianglesToPointsAndIndices(triangles);
 
     std::cout << "num points  : " <<mesh_data.first.size() << std::endl;
@@ -350,6 +357,9 @@ int main() {
     points = mesh_data.first;
     indices = mesh_data.second;
 
+
+    delete poly_shape;
+    
     std::stringstream ss;
 
     // write indices
@@ -386,12 +396,12 @@ int main() {
         for visualization purposes. thanks to chatgpt :)
     */
     SetClipboardText(ss.str());
- 
+
     // Clean up FreeType resources
     FT_Done_Face(ftFace);
     FT_Done_FreeType(ftLibrary);
 
-    std::cout << "MSDF generation complete." << std::endl;
+    std::cout << "Mesh generation complete." << std::endl;
 
     return 0;
 }
