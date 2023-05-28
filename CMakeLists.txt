@@ -28,4 +28,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC) # ${POLY2TRY_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} poly2tri ) # ${POLY2TRY_LIBRARY})
 
 
-
+# tiny-utf8
+add_subdirectory(vendor/tiny-utf8)
+target_include_directories(${PROJECT_NAME} PUBLIC)
+target_link_libraries(${PROJECT_NAME} tinyutf8)
