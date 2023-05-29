@@ -27,6 +27,25 @@
 #include "tinyutf8/tinyutf8.h"
 
 size_t ITER = 3;
+bool isPointInside(const glm::vec2& point, const std::vector<p2t::Point*>& shape) {
+    size_t numPoints = shape.size();
+    int crossings = 0;
+
+    for (size_t i = 0; i < numPoints; ++i) {
+        p2t::Point* p1 = shape[i];
+        p2t::Point* p2 = shape[(i + 1) % numPoints];
+
+        if (((p1->y <= point.y && point.y < p2->y) || (p2->y <= point.y && point.y < p1->y)) &&
+            (point.x < (p2->x - p1->x) * (point.y - p1->y) / (p2->y - p1->y) + p1->x)) {
+            crossings++;
+        }
+    }
+
+    // If the number of crossings is odd, the point is inside the shape
+    return (crossings % 2) == 1;
+}
+
+
 bool contour_is_clockwise(const Contour &contour);
 
 std::string write_p5_string(GlyphShape &shape, FT_Glyph_Metrics &metrics)
@@ -240,8 +259,16 @@ Poly2TriShape *glyph_shape_to_poly2tri(const GlyphShape &glyph_shape)
 
         if (contour_is_clockwise(contour) == false)
         {
-            std::reverse(points.begin(), points.end());
-            s->holes.push_back(points);
+            // std::reverse(points.begin(), points.end());
+
+            if( s->base_shapes.size() > 0)
+            {
+ 
+                s->holes.push_back(points);                
+
+            }
+
+
         
         }else{
             
@@ -302,7 +329,7 @@ int main()
     FT_Set_Pixel_Sizes(ftFace, 3, 3); // Adjust the size as needed
 
 
-    tiny_utf8::utf8_string utf_string = "G";
+    tiny_utf8::utf8_string utf_string = "é";
 
 
     auto char_code = static_cast<unsigned char>(utf_string[0]);
@@ -326,7 +353,20 @@ int main()
         p2t::CDT *cdt = new p2t::CDT(base_shape);
         for (const auto hole : poly_shape->holes)
         {
-            cdt->AddHole(hole);
+            bool is_inside = true;
+            for(auto pt : hole)
+            {
+                if(isPointInside(glm::vec2(pt->x, pt->y), base_shape) == false)
+                {
+                    is_inside = false;
+                    break;
+                }
+            }
+            
+            if( is_inside)
+            {
+                cdt->AddHole(hole);
+            }
         }
 
         cdt->Triangulate();
