@@ -19,10 +19,6 @@
 
 #include "poly2tri/poly2tri.h"
 
-// #include <iomanip>
-#include <locale>
-#include <string>
-#include <codecvt>
 
 #include "tinyutf8/tinyutf8.h"
 
@@ -319,21 +315,21 @@ int main()
 
     // Load font face
     FT_Face ftFace;
-    FT_New_Face(ftLibrary, "C:/Windows/Fonts/arial.ttf", 0, &ftFace);
-    // FT_New_Face(ftLibrary, "C:/Windows/Fonts/BRLNSR.TTF", 0, &ftFace);
+    // FT_New_Face(ftLibrary, "C:/Windows/Fonts/arial.ttf", 0, &ftFace);
+    FT_New_Face(ftLibrary, "C:/Windows/Fonts/BRLNSR.TTF", 0, &ftFace);
 
-    // Load glyph into the face's glyph slot
+    /* Load glyph into the face's glyph slot */
     FT_Select_Charmap(ftFace, FT_ENCODING_UNICODE);
 
-    // Set font size and scaling
+    /* Set font size and scaling */
     FT_Set_Pixel_Sizes(ftFace, 3, 3); // Adjust the size as needed
 
 
-    tiny_utf8::utf8_string utf_string = "é";
+    tiny_utf8::utf8_string utf_string = "%";
 
 
     auto char_code = static_cast<unsigned char>(utf_string[0]);
-    std::cout << std::hex << char_code << std::endl;
+    std::cout << std::hex << char_code << std::dec << std::endl;
     auto char_index = FT_Get_Char_Index(ftFace, char_code);
     FT_Load_Glyph(ftFace, char_index, FT_LOAD_DEFAULT);
     auto metrics = ftFace->glyph->metrics;
