@@ -69,10 +69,10 @@ float contour_is_clockwise(const Contour &contour)
     float sum = 0.0f;
     size_t numPoints = contour.points.size();
 
-    for (size_t i = 0; i < numPoints; ++i)
+    for (size_t i = 0; i < numPoints - 1; ++i)
     {
         const glm::vec2 &p1 = contour.points[i];
-        const glm::vec2 &p2 = contour.points[(i + 1) % numPoints];
+        const glm::vec2 &p2 = contour.points[(i + 1)];
         sum += (p2.x - p1.x) * (p2.y + p1.y);
     }
 
@@ -223,55 +223,31 @@ Poly2TriShape *glyph_shape_to_poly2tri(const GlyphShape &glyph_shape)
 {
     Poly2TriShape *s = new Poly2TriShape();
 
-    // if(glyph_shape.contours.size() > 0)
-    // {
-    //     auto& contour = glyph_shape.contours[0];
-    //     std::vector<p2t::Point*> points;
-    //     // points.reserve(contour.points.size());
-
-    //     for (auto& cpt : contour.points)
-    //     {
-    //         p2t::Point* pt = new p2t::Point(cpt.x, cpt.y);
-    //         points.push_back(pt);
-
-    //         // std::cout << pt->x << ", " << pt->y << std::endl;
-
-    //     }
-
-    //     // remove last point !!
-    //     points.pop_back();
-
-    //     s->base_shapes.push_back(points);
-
-    // }
-
-    if (glyph_shape.contours.size() > 0)
+    for (size_t i = 0; i < glyph_shape.contours.size(); i++)
     {
-        for (size_t i = 0; i < glyph_shape.contours.size(); i++)
+        /* code */
+        auto &contour = glyph_shape.contours[i];
+
+        std::vector<p2t::Point *> points;
+        for (auto &cpt : contour.points)
         {
-            /* code */
-            auto &contour = glyph_shape.contours[i];
+            p2t::Point *pt = new p2t::Point(cpt.x, cpt.y);
+            points.push_back(pt);
+        }
 
-            std::vector<p2t::Point *> points;
-            for (auto &cpt : contour.points)
-            {
-                p2t::Point *pt = new p2t::Point(cpt.x, cpt.y);
-                points.push_back(pt);
-            }
+        // remove last point !!
+        points.pop_back();
 
-            // remove last point !!
-            points.pop_back();
-
-            if (!contour_is_clockwise(contour))
-            {
-                s->holes.push_back(points);
-            }
-            else
-            {
-                s->base_shapes.push_back(points);
-            }
+        if (!contour_is_clockwise(contour))
+        {
+            s->holes.push_back(points);
+        }
+        else
+        {
+            s->base_shapes.push_back(points);
         }
     }
+
     return s;
 }
 
@@ -315,8 +291,8 @@ int main()
 
     // Load font face
     FT_Face ftFace;
-    // FT_New_Face(ftLibrary, "C:/Windows/Fonts/arial.ttf", 0, &ftFace);
-    FT_New_Face(ftLibrary, "C:/Windows/Fonts/BRLNSR.TTF", 0, &ftFace);
+    FT_New_Face(ftLibrary, "C:/Windows/Fonts/arial.ttf", 0, &ftFace);
+    // FT_New_Face(ftLibrary, "C:/Windows/Fonts/BRLNSR.TTF", 0, &ftFace);
 
     // Load glyph into the face's glyph slot
     FT_Select_Charmap(ftFace, FT_ENCODING_UNICODE);
@@ -324,7 +300,7 @@ int main()
     // Set font size and scaling
     FT_Set_Pixel_Sizes(ftFace, 3, 3); // Adjust the size as needed
 
-    tiny_utf8::utf8_string utf_string = "*";
+    tiny_utf8::utf8_string utf_string = "â";
 
     auto char_code = static_cast<unsigned char>(utf_string[0]);
     std::cout << std::hex << char_code << std::endl;
