@@ -5,6 +5,7 @@
 #include <ostream>
 #include <sstream>
 #include <vector>
+#include <algorithm>
 #include <unordered_map>
 #include <windows.h>
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -26,7 +27,7 @@
 #include "tinyutf8/tinyutf8.h"
 
 size_t ITER = 3;
-float contour_is_clockwise(const Contour &contour);
+bool contour_is_clockwise(const Contour &contour);
 
 std::string write_p5_string(GlyphShape &shape, FT_Glyph_Metrics &metrics)
 {
@@ -43,28 +44,27 @@ std::string write_p5_string(GlyphShape &shape, FT_Glyph_Metrics &metrics)
 
         if (contour_is_clockwise(contour))
         {
-            ss << "fill(255,0,0,20);" << std::endl;
+            ss << "fill(255,0,0,150);";
         }
         else
         {
-            ss << "fill(0,255,0,20);" << std::endl;
+            ss << "fill(0,255,0,150);";
         }
 
-        ss << "beginShape();" << std::endl;
+        ss << "beginShape();";
 
         for (auto &point : contour.points)
         {
-            ss << "\tvertex(" << point.x << ", " << point.y << ");" << std::endl;
+            ss << "\tvertex(" << point.x << ", " << point.y << ");";
         }
 
-        ss << "endShape();\n"
-           << std::endl;
+        ss << "endShape();" << std::endl;
     }
 
     return ss.str();
 }
 
-float contour_is_clockwise(const Contour &contour)
+bool contour_is_clockwise(const Contour &contour)
 {
     float sum = 0.0f;
     size_t numPoints = contour.points.size();
@@ -80,7 +80,7 @@ float contour_is_clockwise(const Contour &contour)
 
     // Positive sum indicates counterclockwise winding
     // Negative sum indicates clockwise winding
-    return sum < 0;
+    return (sum < 0.0f);
 }
 
 // Function to set text in the clipboard
@@ -238,12 +238,13 @@ Poly2TriShape *glyph_shape_to_poly2tri(const GlyphShape &glyph_shape)
         // remove last point !!
         points.pop_back();
 
-        if (!contour_is_clockwise(contour))
+        if (contour_is_clockwise(contour) == false)
         {
+            std::reverse(points.begin(), points.end());
             s->holes.push_back(points);
-        }
-        else
-        {
+        
+        }else{
+            
             s->base_shapes.push_back(points);
         }
     }
@@ -300,7 +301,9 @@ int main()
     // Set font size and scaling
     FT_Set_Pixel_Sizes(ftFace, 3, 3); // Adjust the size as needed
 
-    tiny_utf8::utf8_string utf_string = "â";
+
+    tiny_utf8::utf8_string utf_string = "G";
+
 
     auto char_code = static_cast<unsigned char>(utf_string[0]);
     std::cout << std::hex << char_code << std::endl;
@@ -315,11 +318,9 @@ int main()
 
     Poly2TriShape *poly_shape = glyph_shape_to_poly2tri(my_shape);
 
-    std::vector<glm::vec2> points;
-    std::vector<int> indices;
     std::vector<p2t::Triangle *> triangles;
 
-    for (const auto &base_shape : poly_shape->base_shapes)
+    for (const auto base_shape : poly_shape->base_shapes)
     {
 
         p2t::CDT *cdt = new p2t::CDT(base_shape);
@@ -338,8 +339,8 @@ int main()
     std::cout << "num points  : " << mesh_data.first.size() << std::endl;
     std::cout << "num indices : " << mesh_data.second.size() << std::endl;
 
-    points = mesh_data.first;
-    indices = mesh_data.second;
+    std::vector<glm::vec2> points = mesh_data.first;
+    std::vector<int> indices = mesh_data.second;
 
     delete poly_shape;
 
@@ -377,7 +378,11 @@ int main()
         very cool method, used only to populate clipboard to be able to just paste content into p5js editor,
         for visualization purposes. thanks to chatgpt :)
     */
+    std::string winding_test = write_p5_string(my_shape,ftFace->glyph->metrics);
+    
     SetClipboardText(ss.str());
+    // SetClipboardText(winding_test);
+
 
     // Clean up FreeType resources
     FT_Done_Face(ftFace);
